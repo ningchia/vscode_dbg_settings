@@ -1,0 +1,54 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        // LC : 
+        // Suggest to build firmware in MinGW/Cygin shell directly so that to see error messages during compiling. 
+        // Launch external shell in VS code, like what done here, the shell window will close immediately 
+        // after the building process is terminated. We have no chance to see what happened.
+        {
+            "label": "Build All",
+            "type": "shell",
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "shell": {
+                    "executable": "C:/msys64/mingw64.exe"
+               }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true,
+            },
+            "problemMatcher": {
+                "base": "$gcc", 
+                "fileLocation": ["relative", "${workspaceFolder}"]
+            }
+        },
+        {
+            "label": "Clean up except libraries imported",
+            "type": "shell",
+            "command": "make clean",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "shell": {
+                    "executable": "C:/msys64/mingw64.exe"
+               }
+            },
+            "group": "build"
+        },
+        {
+            "label": "Clean libraries imported",
+            "type": "shell",
+            "command": "make cleanlib",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "shell": {
+                    "executable": "C:/msys64/mingw64.exe"
+               }
+            },
+            "group": "build"
+        }
+    ]
+}

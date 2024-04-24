@@ -1,0 +1,376 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        // Hover to view descriptions of existing attributes.
+        // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+        {
+            "name": "Cortex Debug (M467) by JLink",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "jlink",
+            "serverpath": "C:/Program Files/SEGGER/JLink_V794/JLinkGDBServerCL.exe",
+            "serverArgs": [
+                "-vd"   // enable verify download.
+            ],
+            // (Opt-1) for zephyr we use arm-zephyr-eabi-gdb in zephyrsdk as it knows more about zephyr.
+            // TO SEE : how to enable RTOS knowledge (of jlink?) : https://github.com/zephyrproject-rtos/jlink-zephyr
+            // however, arm-none-eabi still works if we want it.
+            //"armToolchainPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin",
+            //"toolchainPrefix": "arm-zephyr-eabi",
+            // (Opt-2) use "gdbPath" directly to specify arm-zephyr-eabi-gdb in zephyrsdk.
+            // however, arm-none-eabi still works if we want it.
+            //"gdbPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+            // (Opt-3) but arm-none-eabi-gdb still works if we want it.
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "M467HJHAN",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",  // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        // @LC@
+        // Check whether openocd gdb server works normally first:
+        //  1. program the compiled elf/bin image to target :
+        //      openocd -f "interface/nulink.cfg" -f "target/numicroM4.cfg" 
+        //          -c "program c:/TempC/VSCode_Test/GnuExeSample/Build/M467EVB/DEBUG/GnuExeSample_M467EVB.elf verify reset exit"
+        //  2. run openocd gdb server and make it listen on local port 50000 manually :
+        //      openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002"
+        //          -f interface/nulink.cfg -f target/numicroM4.cfg
+        //  3. run gdb client manually
+        //      c:\xcompiler\armgcc\bin\arm-none-eabi-gdb
+        //     and then operate gdb shell 
+        //     (refer to : https://welkinchen.pixnet.net/blog/post/60935296-%E9%99%A4%E9%8C%AF%E5%B7%A5%E5%85%B7-gdb-%28the-gnu-project-debugger%29
+        //                 https://developer.apple.com/library/archive/documentation/DeveloperTools/gdb/gdb/gdb_6.html)
+        //      (gdb) target remote localhost:50000     // connect to gdb server
+        //      (gdb) monitor reset init                // reset target. 
+        //      (gdb) monitor halt                      // (optional) if target state is not halt, issue this again.
+        //      (gdb) file c:/TempC/VSCode_Test/GnuExeSample/Build/M467EVB/DEBUG/GnuExeSample_M467EVB.elf   // load symbol
+        //      (gdb) b main                            // set breakpoint at main() (can be "filename:function" or "filename:line_num")
+        //      (gdb) clear main                        // remove breakpoint at main() (can be "filename:function" or "filename:line_num")
+        //      (gdb) c                                 // continue until breakpoint reached (press Ctrl-C to halt abd back to gdb shell)
+        //       (gdb) bt                                // backtrace
+        //       (gdb) frame | frame <n>                 // display current | <specified, 0-based> frame on stack
+        //       (gdb) l                                 // list source lines nearby
+        //       (gdb) print var                         // check value of var (accept var, &var, *var)
+        //       (gdb) printf "x is %d\n",x              // print value of var in c-format string
+        //       (gdb) info registers                    // display value of registers
+        //       (gdb) info locals                       // print values of local variables
+        //       (gdb) watch|rwatch|awatch varname       // break when memory is written/read/any action
+        //       (gdb) info watch                        // list watchpoints
+        //      (gdb) n | n 5                           // next line | next 5 lines
+        //      (gdb) s                                 // step into function
+        //      (gdb) finish                            // step out from function
+        //
+        {
+            // To use this debug config, launch openocd server in another cmd prompt (or powershell).
+            // ex. openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" 
+            //          -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" 
+            //          -f interface/nulink.cfg -f target/numicroM4.cfg
+            //
+            // (in a single cmd line for ease of copy) 
+            // openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" -f interface/nulink.cfg -f target/numicroM4.cfg
+            "name": "Cortex Debug (M467) by OpenOCD launched EXTERNALLY",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "external",           // openocd gdb server was launched externally
+            "gdbTarget": "localhost:50000",     // = (gdb) target remote localhost:50000
+            // if want to program flash before debugging.
+            // refer to : https://openocd.sourceforge.io/doc/html/Flash-Programming.html
+            "preLaunchCommands": [
+                // don't know why the verify always failed with msg "Error: checksum mismatch - attempting binary compare"
+                //"monitor program ./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf verify reset",
+                "monitor program ./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf"
+            ],
+            // (Opt-1) for zephyr we use arm-zephyr-eabi-gdb in zephyrsdk as it knows more about zephyr.
+            // TO SEE : how to enable RTOS knowledge (of jlink?) : https://github.com/zephyrproject-rtos/jlink-zephyr
+            // however, arm-none-eabi still works if we want it.
+            //"armToolchainPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin",
+            //"toolchainPrefix": "arm-zephyr-eabi",
+            // (Opt-2) use "gdbPath" directly to specify arm-zephyr-eabi-gdb in zephyrsdk.
+            // however, arm-none-eabi still works if we want it.
+            //"gdbPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+            // (Opt-3) but arm-none-eabi-gdb still works if we want it.
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "M467HJHAN",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",    // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        // To run this debug configuration we need to install pyOCD (pip intsall pyocd) first
+        // Targets pyocd supports can be found by invoking cmd :
+        //      pyocd list --targets
+        // to check whether pyocd works well manually, launch pyocd gdbserver manually 1st :
+        //      pyocd gdbserver --port 50000 --telnet-port 50001 --target=m467hjhae
+        // then we can run gdb client : 
+        //      c:\xcompiler\armgcc\bin\arm-none-eabi-gdb
+        // and then operate gdb shell 
+        //      ---- reset and halt target device ----
+        //      monitor halt
+        //      monitor reset
+        //      monitor halt
+        //      ---- flash target with specified elf file ----
+        //      load C:/TempC/VSCode_Test/zephyr_venv/zephyr_only_ws/zephyr/build/zephyr/zephyr.elf
+        //      ---- load symbol from specified elf file ----
+        //      file C:/TempC/VSCode_Test/zephyr_venv/zephyr_only_ws/zephyr/build/zephyr/zephyr.elf
+        //      ---- setup breakpoint, continue running, run-to-next-line, ... ---
+        //      b main
+        //      c
+        //      n
+        {   
+            "name": "Cortex Debug (M467) by PyOCD",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "pyocd",
+            // (OPT-1) if pyocd is installed globally, say, python installation dir is c:\python39,
+            "serverpath": "C:/python39/scripts/pyocd.exe",
+            // (OPT-2) if pyocd is installed in virtual environment, say, the venv is named zephyrenv
+            //"serverpath": "../zephyrenv/scripts/pyocd.exe",
+            "serverArgs": [
+                "--target=m467hjhae"
+            ],
+            // (Opt-1) for zephyr we use arm-zephyr-eabi-gdb in zephyrsdk as it knows more about zephyr.
+            // TO SEE : how to enable RTOS knowledge (of jlink?) : https://github.com/zephyrproject-rtos/jlink-zephyr
+            // however, arm-none-eabi still works if we want it.
+            //"armToolchainPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin",
+            //"toolchainPrefix": "arm-zephyr-eabi",
+            // (Opt-2) use "gdbPath" directly to specify arm-zephyr-eabi-gdb in zephyrsdk.
+            // however, arm-none-eabi still works if we want it.
+            //"gdbPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+            // (Opt-3) but arm-none-eabi-gdb still works if we want it.
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",    // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        {   
+            // ??? ## CANNOT work. Don't know why. ## ?????
+            //
+            // use the openocd build from https://github.com/OpenNuvoton/OpenOCD-Nuvoton/releases/tag/v1.02.022r
+            //
+            // gdb client failed to connect to openocd gdb server if let VS code to launch openocd?? 
+            // but openocd gbd server works smoothly if launched it and gdb client manually.
+            // ---- in VS code environment ----
+            // got message in "terminal" (gdb server output) that openocd gdb server had launched successfully 
+            // but "debug console" (gdb client output) said "Failed to launch OpenOCD GDB Server: Timeout."??
+            // result is gdb client failed to launch gdb server ??? (failed to connect to it)
+            "name": "Cortex Debug (M467) by OpenOCD",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "serverpath": "C:/openocd/bin/openocd.exe",
+            // "configFiles" (string[]) :	OpenOCD/PE GDB Server configuration file(s) to use when debugging (OpenOCD -f option)
+            "configFiles": [
+                "interface/nulink.cfg",
+                "target/numicroM4.cfg"
+            ],
+            // "openOCDPreConfigLaunchCommands" (string[]): OpenOCD command(s) before configuration files are loaded (-c options)
+            // "openOCDLaunchCommands" (string[]): OpenOCD command(s) after configuration files are loaded (-c options)
+            //
+            // if want to program flash before debugging.
+            // refer to : https://openocd.sourceforge.io/doc/html/Flash-Programming.html
+            //"openOCDLaunchCommands": [
+            //    "program ./Build/M467EVB/Debug/GnuExeSample_M467EVB.elf verify reset"
+            //],
+            // (Opt-1) for zephyr we use arm-zephyr-eabi-gdb in zephyrsdk as it knows more about zephyr.
+            // TO SEE : how to enable RTOS knowledge (of jlink?) : https://github.com/zephyrproject-rtos/jlink-zephyr
+            // however, arm-none-eabi still works if we want it.
+            //"armToolchainPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin",
+            //"toolchainPrefix": "arm-zephyr-eabi",
+            // (Opt-2) use "gdbPath" directly to specify arm-zephyr-eabi-gdb in zephyrsdk.
+            // however, arm-none-eabi still works if we want it.
+            //"gdbPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+            // (Opt-3) but arm-none-eabi-gdb still works if we want it.
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "M467HJHAN",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",    // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        {
+            "name": "Cortex Debug (NUC472) by JLink",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/NUC472TinyEVB/Debug/GnuExeSample_NUC472TinyEVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "jlink",
+            "serverpath": "C:/Program Files/SEGGER/JLink_V794/JLinkGDBServerCL.exe",
+            "serverArgs": [
+                "-vd"   // enable verify download.
+            ],
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "NUC472HI8AE",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",  // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        {
+            // To use this debug config, launch openocd server in another cmd prompt (or powershell).
+            // ex. openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" 
+            //          -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" 
+            //          -f interface/nulink.cfg -f target/numicroM4.cfg
+            //
+            // (in a single cmd line for ease of copy) 
+            // openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" -f interface/nulink.cfg -f target/numicroM4.cfg
+            "name": "Cortex Debug (NUC472) by OpenOCD launched EXTERNALLY",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/NUC472TINYEVB/Debug/GnuExeSample_NUC472TINYEVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "external",           // openocd gdb server was launched externally
+            "gdbTarget": "localhost:50000",     // = (gdb) target remote localhost:50000
+            // if want to program flash before debugging.
+            // refer to : https://openocd.sourceforge.io/doc/html/Flash-Programming.html
+            "preLaunchCommands": [
+                // don't know why the verify always failed with msg "Error: checksum mismatch - attempting binary compare"
+                //"monitor program ./Build/NUC472TINYEVB/Debug/GnuExeSample_NUC472TINYEVB.elf verify reset",
+                "monitor program ./Build/NUC472TINYEVB/Debug/GnuExeSample_NUC472TINYEVB.elf"
+            ],
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "NUC472HI8AE",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",    // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        {
+            "name": "Cortex Debug (M487) by JLink",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/M487EVB/Debug/GnuExeSample_M487EVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "jlink",
+            "serverpath": "C:/Program Files/SEGGER/JLink_V794/JLinkGDBServerCL.exe",
+            "serverArgs": [
+                "-vd"   // enable verify download.
+            ],
+            // (Opt-1) for zephyr we use arm-zephyr-eabi-gdb in zephyrsdk as it knows more about zephyr.
+            // TO SEE : how to enable RTOS knowledge (of jlink?) : https://github.com/zephyrproject-rtos/jlink-zephyr
+            // however, arm-none-eabi still works if we want it.
+            //"armToolchainPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin",
+            //"toolchainPrefix": "arm-zephyr-eabi",
+            // (Opt-2) use "gdbPath" directly to specify arm-zephyr-eabi-gdb in zephyrsdk.
+            // however, arm-none-eabi still works if we want it.
+            //"gdbPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+            // (Opt-3) but arm-none-eabi-gdb still works if we want it.
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "M487JIDAE",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",  // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        },
+        {
+            // To use this debug config, launch openocd server in another cmd prompt (or powershell).
+            // ex. openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" 
+            //          -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" 
+            //          -f interface/nulink.cfg -f target/numicroM4.cfg
+            //
+            // (in a single cmd line for ease of copy) 
+            // openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" -f interface/nulink.cfg -f target/numicroM4.cfg
+            "name": "Cortex Debug (M487) by OpenOCD launched EXTERNALLY",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Build/M487EVB/Debug/GnuExeSample_M487EVB.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "external",           // openocd gdb server was launched externally
+            "gdbTarget": "localhost:50000",     // = (gdb) target remote localhost:50000
+            // if want to program flash before debugging.
+            // refer to : https://openocd.sourceforge.io/doc/html/Flash-Programming.html
+            "preLaunchCommands": [
+                // don't know why the verify always failed with msg "Error: checksum mismatch - attempting binary compare"
+                //"monitor program ./Build/M487EVB/Debug/GnuExeSample_M487EVB.elf verify reset",
+                "monitor program ./Build/M487EVB/Debug/GnuExeSample_M487EVB.elf"
+            ],
+            // (Opt-1) for zephyr we use arm-zephyr-eabi-gdb in zephyrsdk as it knows more about zephyr.
+            // TO SEE : how to enable RTOS knowledge (of jlink?) : https://github.com/zephyrproject-rtos/jlink-zephyr
+            // however, arm-none-eabi still works if we want it.
+            //"armToolchainPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin",
+            //"toolchainPrefix": "arm-zephyr-eabi",
+            // (Opt-2) use "gdbPath" directly to specify arm-zephyr-eabi-gdb in zephyrsdk.
+            // however, arm-none-eabi still works if we want it.
+            //"gdbPath": "C:/Program Files/zephyr-sdk-0.16.5-1/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb.exe",
+            // (Opt-3) but arm-none-eabi-gdb still works if we want it.
+            "armToolchainPath": "C:/xcompiler/armgcc/bin",
+            "device": "M487JIDAE",
+            //"device": "Cortex-M4",    // use "Cortex-M4" will cause FW download verify failed. neex exact device id.
+            "interface": "swd",
+            "serialNumber": "", // add J-Link serial number if having multiple attached the same time.
+            "runToEntryPoint": "main",
+            //"showDevDebugOutput": "raw",    // show detailed debug message about oeprating gdb
+            //"runToMain": true    == deprecated. use "runToEntryPoint": "main" instead.
+            //"svdFile": "${workspaceRoot}/device/MK22F51212.svd",
+            //"setupCommands": [  // for NUC950 with external CFI flash
+            //    { "text": "monitor WorkRAM = 0x100000-0x10FFFF", "description": "configure work ram for flash algorithm", "ignoreFailures": false },
+            //    { "text": "monitor flash CFI = 0x20000000-0x203FFFFF", "description": "configure adr mapping of external CFI flash", "ignoreFailures": false },
+            //    { "text": "monitor flash download = 1", "description": "configure to download program before launch", "ignoreFailures": false }
+            //]
+        }
+    ]
+}
