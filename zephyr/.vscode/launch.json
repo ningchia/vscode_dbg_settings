@@ -40,22 +40,21 @@
         },
         // @LC@
         // To use this debug config, launch openocd server in another cmd prompt (or powershell).
-        // ex. openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" 
-        //          -s "C:/TempC/VSCode_Test/zephyr_test/zephyr" 
-        //          -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" 
-        //
-        // (in a single cmd line for ease of copy) 
-        // openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" -s "C:/TempC/VSCode_Test/zephyr_test/zephyr" -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" -f interface/nulink.cfg -f target/numicroM4.cfg
-        //
+        //      openocd -c "gdb_port 50000" -c "tcl_port 50001" -c "telnet_port 50002" -f "c:/Users/lcchen/.vscode/extensions/marus25.cortex-debug-1.12.1/support/openocd-helpers.tcl" -f interface/nulink.cfg -f target/numicroM4.cfg
         // we can check whether it works normally by runing gdb client manually
         //      c:\xcompiler\armgcc\bin\arm-none-eabi-gdb
         // and then operate gdb shell 
-        // (refer to : https://welkinchen.pixnet.net/blog/post/60935296-%E9%99%A4%E9%8C%AF%E5%B7%A5%E5%85%B7-gdb-%28the-gnu-project-debugger%29
+        // (refer to : https://sourceware.org/gdb/current/onlinedocs/gdb.html/index.html#Top
+        //             https://welkinchen.pixnet.net/blog/post/60935296-%E9%99%A4%E9%8C%AF%E5%B7%A5%E5%85%B7-gdb-%28the-gnu-project-debugger%29
         //             https://developer.apple.com/library/archive/documentation/DeveloperTools/gdb/gdb/gdb_6.html)
         //      (gdb) target remote localhost:50000     // connect to gdb server
-        //      (gdb) monitor reset init                // reset target. 
+        //      (gdb) monitor reset halt                // reset target. can be "reset run", "reset halt", or "reset init"(meaning also run init script))
+        //                                              // ref: https://openocd.org/doc/html/General-Commands.html 
+        //                                              //      https://pyocd.io/docs/command_reference.html#reset
         //      (gdb) monitor halt                      // (optional) if target state is not halt, issue this again.
         //      (gdb) file c:/TempC/VSCode_Test/GnuExeSample/Build/M467EVB/DEBUG/GnuExeSample_M467EVB.elf   // load symbol
+        //      (gdb) symbol-file                       // clear out current symbols
+        //      (gdb) symbol-file <file> -o offset      // load symbol file with offset applied (useful when debugging PIE)
         //      (gdb) b main                            // set breakpoint at main() (can be "filename:function" or "filename:line_num")
         //      (gdb) clear main                        // remove breakpoint at main() (can be "filename:function" or "filename:line_num")
         //      (gdb) c                                 // continue until breakpoint reached (press Ctrl-C to halt abd back to gdb shell)
@@ -66,12 +65,25 @@
         //       (gdb) printf "x is %d\n",x              // print value of var in c-format string
         //       (gdb) info registers                    // display value of registers
         //       (gdb) info locals                       // print values of local variables
+        //       (gdb) info threads                      // list threads and know which thread is executing 
+        //                                               // ========================================
+        //                                               // **    Debugging Zephyr using PyOCD    **
+        //                                               // ========================================
+        //                                               // (if RTOS awareness like pyocd's zephyr plugin is enabled by passing
+        //                                               // session option to gdbserver, ie. "pyocd gdbserver --rtos.name=zephyr")
+        //                                               // For zephyr this also needs enabling "CONFIG_DEBUG_THREAD_INFO" 
+        //                                               // Kconfig setting in zephyr FW project.
+        //                                               // ==========================================
         //       (gdb) watch|rwatch|awatch varname       // break when memory is written/read/any action
-        //       (gdb) info watch                        // list watchpoints
+        //       (gdb) info break|watch                  // list breakpoints | watchpoints
         //      (gdb) n | n 5                           // next line | next 5 lines
         //      (gdb) s                                 // step into function
         //      (gdb) finish                            // step out from function
-        //
+        //     ------ pyocd only? -----                       
+        //      (gdb) set mem inaccessible-by-default off   // allow mem access to regions defined outside the target's memory map 
+        //                                                  // ref : https://pyocd.io/docs/gdbserver.html
+        //      (gdb) monitor set vector-catch all          // enable the M-profile vector catch feature
+        //      (gdb) monitor show fault                    // print out the M-profile fault syndrome registers
         {
             "name": "Zephyr Debug (M467) by OpenOCD launched EXTERNALLY",
             "cwd": "${workspaceRoot}/zephyr",
@@ -115,15 +127,42 @@
         // To run this debug configuration we need to install pyOCD (pip intsall pyocd) first
         // Targets pyocd supports can be found by invoking cmd :
         //      pyocd list --targets
+        //
+        // if there isn't the target we are using, 
+        // OPT-1 : use the follownig cmd to find which DFP (device family pack, CMSIS-Pack) offers 
+        //         support for the chip we are using : 
+        //         (Note : the nulink1 on M487 evb still not support pyocd even after updating NuLink FW ?)
+        //              pyocd pack find m487
+        //
+        //         then we can install the part using cmd :
+        //              pyocd pack install M487JIDAE    
+        //           or pyocd pack install m487
+        //
+        // OPT-2 : manually download the pack from official website : https://www.keil.arm.com/devices/
+        //         then pass the pack file in every pyocd cmd, especially "pyocd gdbserver", like :
+        //              pyocd gdbserver --pack Nuvoton.NuMicro_DFP.1.3.23.pack
+        // 
+        //         or configure it in "pyocd.yml" like below, so that pyocd can choose from them automatically:
+        //              ---- pyocd.yml in current dir ----
+        //              pack:
+        //                  - <path/to/packs/>other pack
+        //                  - <path/to/packs/>Nuvoton.NuMicro_DFP.1.3.23.pack
+        //
+        //         CMSIS-Pack file is uniquely identified by "<vendor>.<pack name>.<version>.pack".
+        //         also see more details in this link: https://pyocd.io/docs/target_support.html .
+        //         its content can be viewed by renaming it as *.zip and extract it. (there are a lot of *.flm in it.)
+        //
+        // OPT-3 : (more preferred) directly add one additional built-in target following the steps mentioned in the 
+        //         link : https://pyocd.io/docs/adding_new_targets.html, and refer to the files under the 
+        //         path : C:\Python39\Lib\site-packages\pyocd\target\builtin, ex. target_M480.py.
+        //
         // to check whether pyocd works well manually, launch pyocd gdbserver manually 1st :
         //      pyocd gdbserver --port 50000 --telnet-port 50001 --target=m467hjhae
         // then we can run gdb client : 
         //      c:\xcompiler\armgcc\bin\arm-none-eabi-gdb
         // and then operate gdb shell 
         //      ---- reset and halt target device ----
-        //      monitor halt
-        //      monitor reset
-        //      monitor halt
+        //      monitor reset halt
         //      ---- flash target with specified elf file ----
         //      load C:/TempC/VSCode_Test/zephyr_venv/zephyr_only_ws/zephyr/build/zephyr/zephyr.elf
         //      ---- load symbol from specified elf file ----
